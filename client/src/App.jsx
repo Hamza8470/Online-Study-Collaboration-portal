@@ -15,6 +15,7 @@ import StudentCoursesPage from "./pages/student/student-courses";
 import StudentViewCourseProgressPage from "./pages/student/course-progress";
 import StudentGroupsPage from "./pages/student/groups";
 import GroupDetailPage from "./pages/student/groups/group-detail";
+import ResetPasswordPage from "./pages/auth/reset-password";
 
 function App() {
   const { auth } = useContext(AuthContext);
@@ -30,6 +31,10 @@ function App() {
             user={auth?.user}
           />
         }
+      />
+      <Route
+        path="/reset-password"
+        element={<ResetPasswordPage />}
       />
       <Route
         path="/instructor"

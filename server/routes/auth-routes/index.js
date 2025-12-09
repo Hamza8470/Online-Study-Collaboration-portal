@@ -3,6 +3,8 @@ const {
   registerUser,
   loginUser,
   forgotPassword,
+  resetPassword,
+  verifyResetToken,
 } = require("../../controllers/auth-controller/index");
 const authenticateMiddleware = require("../../middleware/auth-middleware");
 const router = express.Router();
@@ -10,6 +12,8 @@ const router = express.Router();
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
+router.get("/verify-reset-token/:token", verifyResetToken);
 router.get("/check-auth", authenticateMiddleware, (req, res) => {
   const user = req.user;
 

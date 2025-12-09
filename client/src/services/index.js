@@ -21,6 +21,18 @@ export async function forgotPasswordService(formData) {
   return data;
 }
 
+export async function resetPasswordService(formData) {
+  const { data } = await axiosInstance.post("/auth/reset-password", formData);
+
+  return data;
+}
+
+export async function verifyResetTokenService(token) {
+  const { data } = await axiosInstance.get(`/auth/verify-reset-token/${token}`);
+
+  return data;
+}
+
 export async function checkAuthService() {
   const { data } = await axiosInstance.get("/auth/check-auth");
 

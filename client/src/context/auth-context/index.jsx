@@ -2,10 +2,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { initialSignInFormData, initialSignUpFormData } from "@/config";
 import { checkAuthService, loginService, registerService, forgotPasswordService } from "@/services";
 import { createContext, useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export const AuthContext = createContext(null);
 
 export default function AuthProvider({ children }) {
+  const { toast } = useToast();
   const [signInFormData, setSignInFormData] = useState(initialSignInFormData);
   const [signUpFormData, setSignUpFormData] = useState(initialSignUpFormData);
   const [auth, setAuth] = useState({
@@ -20,18 +22,25 @@ export default function AuthProvider({ children }) {
       const data = await registerService(signUpFormData);
 
       if (data.success) {
-        // simple feedback; you can replace with toast UI
-        alert("Registration successful. You can now sign in.");
-        // reset sign up form
+        toast({
+          title: "Success!",
+          description: "Registration successful. You can now sign in.",
+        });
         setSignUpFormData(initialSignUpFormData);
       } else {
-        alert(data.message || "Registration failed");
+        toast({
+          title: "Registration Failed",
+          description: data.message || "Registration failed",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error(error);
-      alert(
-        error?.response?.data?.message || "Registration failed due to server error"
-      );
+      toast({
+        title: "Registration Failed",
+        description: error?.response?.data?.message || "Registration failed due to server error",
+        variant: "destructive",
+      });
     }
   }
 
@@ -39,7 +48,6 @@ export default function AuthProvider({ children }) {
     event.preventDefault();
     try {
       const data = await loginService(signInFormData);
-      console.log(data, "datadatadatadatadata");
 
       if (data.success) {
         sessionStorage.setItem(
@@ -50,10 +58,17 @@ export default function AuthProvider({ children }) {
           authenticate: true,
           user: data.data.user,
         });
-        // Reset form after successful login
         setSignInFormData(initialSignInFormData);
+        toast({
+          title: "Welcome back!",
+          description: "You have been logged in successfully.",
+        });
       } else {
-        alert(data.message || "Login failed. Please check your credentials.");
+        toast({
+          title: "Login Failed",
+          description: data.message || "Login failed. Please check your credentials.",
+          variant: "destructive",
+        });
         setAuth({
           authenticate: false,
           user: null,
@@ -61,9 +76,11 @@ export default function AuthProvider({ children }) {
       }
     } catch (error) {
       console.error("Login error:", error);
-      alert(
-        error?.response?.data?.message || "Login failed due to server error. Please try again."
-      );
+      toast({
+        title: "Login Failed",
+        description: error?.response?.data?.message || "Login failed due to server error. Please try again.",
+        variant: "destructive",
+      });
       setAuth({
         authenticate: false,
         user: null,
@@ -71,17 +88,39 @@ export default function AuthProvider({ children }) {
     }
   }
 
-  async function handleForgotPassword() {
+  async function handleForgotPassword(email) {
     try {
-      const email = window.prompt("Enter your account email for password reset:");
-      if (!email) return;
+      if (!email) {
+        toast({
+          title: "Email Required",
+          description: "Please enter your email address",
+          variant: "destructive",
+        });
+        return { success: false };
+      }
       const data = await forgotPasswordService({ userEmail: email });
-      alert(data.message || "If the email exists, a reset link has been sent.");
+      if (data.success) {
+        toast({
+          title: "Email Sent",
+          description: data.message || "If an account with that email exists, a password reset link has been sent.",
+        });
+        return { success: true };
+      } else {
+        toast({
+          title: "Failed",
+          description: data.message || "Failed to send reset email",
+          variant: "destructive",
+        });
+        return { success: false };
+      }
     } catch (error) {
       console.error(error);
-      alert(
-        error?.response?.data?.message || "Failed to submit forgot password request"
-      );
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to submit forgot password request",
+        variant: "destructive",
+      });
+      return { success: false };
     }
   }
 

@@ -6,15 +6,29 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { signInFormControls, signUpFormControls } from "@/config";
 import { AuthContext } from "@/context/auth-context";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Loader2, Mail } from "lucide-react";
 import { useContext, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 function AuthPage() {
   const [activeTab, setActiveTab] = useState("signin");
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
   const navigate = useNavigate();
   const {
     signInFormData,
@@ -59,7 +73,21 @@ function AuthPage() {
     );
   }
 
-  console.log(signInFormData);
+  async function handleForgotPasswordSubmit(e) {
+    e.preventDefault();
+    if (!forgotPasswordEmail.trim()) return;
+
+    setSendingEmail(true);
+    const result = await handleForgotPassword(forgotPasswordEmail.trim());
+    setSendingEmail(false);
+
+    if (result.success) {
+      setForgotPasswordEmail("");
+      setTimeout(() => {
+        setForgotPasswordOpen(false);
+      }, 2000);
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -98,13 +126,51 @@ function AuthPage() {
                   handleSubmit={handleLoginUser}
                 />
                 <div className="text-right mt-2">
-                  <button
-                    type="button"
-                    onClick={handleForgotPassword}
-                    className="text-sm text-primary underline"
-                  >
-                    Forgot password?
-                  </button>
+                  <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
+                    <DialogTrigger asChild>
+                      <button
+                        type="button"
+                        className="text-sm text-primary underline hover:no-underline"
+                      >
+                        Forgot password?
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Mail className="h-5 w-5" />
+                          Reset Password
+                        </DialogTitle>
+                        <DialogDescription>
+                          Enter your email address and we'll send you a link to reset your password.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleForgotPasswordSubmit} className="space-y-4 mt-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="forgot-email">Email Address</Label>
+                          <Input
+                            id="forgot-email"
+                            type="email"
+                            placeholder="Enter your email"
+                            value={forgotPasswordEmail}
+                            onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                            required
+                            disabled={sendingEmail}
+                          />
+                        </div>
+                        <Button type="submit" className="w-full" disabled={sendingEmail}>
+                          {sendingEmail ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            "Send Reset Link"
+                          )}
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardContent>
             </Card>
