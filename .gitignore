@@ -1,0 +1,33 @@
+# Environment variables - NEVER commit these!
+.env
+.env.local
+.env.*.local
+*.env
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads and temporary files
+uploads/
+*.tmp
+*.temp
+
+# PowerShell scripts (optional - remove if you want to keep update-env.ps1)
+# update-env.ps1
+
