@@ -3,6 +3,11 @@ const Group = require("../models/Group");
 const GroupMessage = require("../models/GroupMessage");
 const GroupResource = require("../models/GroupResource");
 const GroupTask = require("../models/GroupTask");
+const GroupPoll = require("../models/GroupPoll");
+const GroupFile = require("../models/GroupFile");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
 const INVITE_TOKEN_SECRET = process.env.INVITE_TOKEN_SECRET || "INVITE_TOKEN_SECRET";
 
@@ -322,6 +327,187 @@ const updateTaskStatus = async (req, res) => {
   }
 };
 
+// File upload configuration
+const uploadsDir = path.join(__dirname, "../uploads/groups");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+  fileFilter: (req, file, cb) => {
+    // Allow all file types
+    cb(null, true);
+  },
+});
+
+const uploadFile = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user._id;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    const group = await findGroupAndEnsureMember(groupId, userId, res);
+    if (!group) return;
+
+    const groupFile = await GroupFile.create({
+      groupId,
+      uploadedBy: userId,
+      fileName: file.filename,
+      originalName: file.originalname,
+      filePath: `/uploads/groups/${file.filename}`,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      description: req.body.description || "",
+    });
+
+    await groupFile.populate("uploadedBy", "userName userEmail");
+
+    return res.status(201).json({
+      success: true,
+      message: "File uploaded successfully",
+      data: groupFile,
+    });
+  } catch (error) {
+    console.error("uploadFile error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+const getFiles = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user._id;
+
+    const group = await findGroupAndEnsureMember(groupId, userId, res);
+    if (!group) return;
+
+    const files = await GroupFile.find({ groupId })
+      .populate("uploadedBy", "userName userEmail")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({ success: true, data: files });
+  } catch (error) {
+    console.error("getFiles error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+const createPoll = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { question, options, expiresAt } = req.body;
+    const userId = req.user._id;
+
+    if (!question || !options || !Array.isArray(options) || options.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: "Question and at least 2 options are required",
+      });
+    }
+
+    const group = await findGroupAndEnsureMember(groupId, userId, res);
+    if (!group) return;
+
+    const poll = await GroupPoll.create({
+      groupId,
+      createdBy: userId,
+      question,
+      options: options.map((opt) => ({ text: opt, votes: [] })),
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+    });
+
+    await poll.populate("createdBy", "userName userEmail");
+
+    return res.status(201).json({ success: true, message: "Poll created", data: poll });
+  } catch (error) {
+    console.error("createPoll error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+const getPolls = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user._id;
+
+    const group = await findGroupAndEnsureMember(groupId, userId, res);
+    if (!group) return;
+
+    const polls = await GroupPoll.find({ groupId })
+      .populate("createdBy", "userName userEmail")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({ success: true, data: polls });
+  } catch (error) {
+    console.error("getPolls error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+const votePoll = async (req, res) => {
+  try {
+    const { groupId, pollId } = req.params;
+    const { optionIndex } = req.body;
+    const userId = req.user._id;
+
+    const group = await findGroupAndEnsureMember(groupId, userId, res);
+    if (!group) return;
+
+    const poll = await GroupPoll.findOne({ _id: pollId, groupId });
+    if (!poll) {
+      return res.status(404).json({ success: false, message: "Poll not found" });
+    }
+
+    if (!poll.isActive) {
+      return res.status(400).json({ success: false, message: "Poll is not active" });
+    }
+
+    if (poll.expiresAt && new Date() > poll.expiresAt) {
+      poll.isActive = false;
+      await poll.save();
+      return res.status(400).json({ success: false, message: "Poll has expired" });
+    }
+
+    if (optionIndex < 0 || optionIndex >= poll.options.length) {
+      return res.status(400).json({ success: false, message: "Invalid option" });
+    }
+
+    // Remove user's vote from all options
+    poll.options.forEach((option) => {
+      option.votes = option.votes.filter(
+        (voteId) => voteId.toString() !== userId
+      );
+    });
+
+    // Add vote to selected option
+    poll.options[optionIndex].votes.push(userId);
+    await poll.save();
+
+    await poll.populate("createdBy", "userName userEmail");
+
+    return res.status(200).json({ success: true, message: "Vote recorded", data: poll });
+  } catch (error) {
+    console.error("votePoll error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 module.exports = {
   createGroup,
   getMyGroups,
@@ -334,5 +520,11 @@ module.exports = {
   addTask,
   getTasks,
   updateTaskStatus,
+  uploadFile,
+  getFiles,
+  createPoll,
+  getPolls,
+  votePoll,
+  upload, // Export multer middleware
 };
 

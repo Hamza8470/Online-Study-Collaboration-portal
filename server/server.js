@@ -1,5 +1,7 @@
 require("dotenv").config();
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const authRoutes = require("./routes/auth-routes/index");
@@ -10,8 +12,20 @@ const studentViewOrderRoutes = require("./routes/student-routes/order-routes");
 const studentCoursesRoutes = require("./routes/student-routes/student-courses-routes");
 const studentCourseProgressRoutes = require("./routes/student-routes/course-progress-routes");
 const groupRoutes = require("./routes/group-routes");
+const { setupSocketIO } = require("./socket/socket-handler");
 
 const app = express();
+const server = http.createServer(app);
+const io = setupSocketIO(
+  new Server(server, {
+    cors: {
+      origin: process.env.CLIENT_URL || "http://localhost:5173",
+      methods: ["GET", "POST"],
+      credentials: true,
+    },
+  })
+);
+
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -24,6 +38,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(express.static("uploads")); // Serve uploaded files
 
 //database connection
 if (!MONGO_URI || MONGO_URI === "your_mongodb_cluster_uri_here") {
@@ -57,6 +72,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is now running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 Server is now running on port ${PORT}`);
+  console.log(`📡 Socket.io is ready for real-time connections`);
 });

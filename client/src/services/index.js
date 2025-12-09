@@ -229,3 +229,33 @@ export async function updateGroupTaskStatusService(groupId, taskId, payload) {
   );
   return data;
 }
+
+export async function uploadGroupFileService(groupId, formData) {
+  const { data } = await axiosInstance.post(`/groups/${groupId}/files`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function fetchGroupFilesService(groupId) {
+  const { data } = await axiosInstance.get(`/groups/${groupId}/files`);
+  return data;
+}
+
+export async function createGroupPollService(groupId, payload) {
+  const { data } = await axiosInstance.post(`/groups/${groupId}/polls`, payload);
+  return data;
+}
+
+export async function fetchGroupPollsService(groupId) {
+  const { data } = await axiosInstance.get(`/groups/${groupId}/polls`);
+  return data;
+}
+
+export async function voteGroupPollService(groupId, pollId, payload) {
+  const { data } = await axiosInstance.post(
+    `/groups/${groupId}/polls/${pollId}/vote`,
+    payload
+  );
+  return data;
+}
