@@ -347,10 +347,13 @@ const getMessages = async (req, res) => {
     const group = await findGroupAndEnsureMember(groupId, userId, res);
     if (!group) return;
 
-    const messages = await GroupMessage.find({ groupId })
+    // Get latest messages then reverse to show oldest → newest
+    const messagesDesc = await GroupMessage.find({ groupId })
       .populate("senderId", "userName userEmail")
       .sort({ createdAt: -1 })
       .limit(Number(limit) || 30);
+
+    const messages = [...messagesDesc].reverse();
 
     return res.status(200).json({ success: true, data: messages });
   } catch (error) {

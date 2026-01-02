@@ -520,7 +520,7 @@ function GroupDetailPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="border rounded-2xl p-4 h-96 overflow-y-auto space-y-3 flex flex-col-reverse bg-[radial-gradient(circle_at_top,_rgba(79,70,229,0.08),_transparent_35%),_radial-gradient(circle_at_bottom,_rgba(236,72,153,0.08),_transparent_35%)]">
+                <div className="border rounded-2xl p-4 h-96 overflow-y-auto space-y-3 flex flex-col bg-[radial-gradient(circle_at_top,_rgba(79,70,229,0.08),_transparent_35%),_radial-gradient(circle_at_bottom,_rgba(236,72,153,0.08),_transparent_35%)]">
                   {messages.length === 0 ? (
                     <div className="text-center text-muted-foreground py-8">No messages yet. Start the conversation!</div>
                   ) : (

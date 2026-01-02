@@ -90,6 +90,29 @@ const loginUser = async (req, res) => {
       });
     }
 
+    // Check if user is suspended or banned
+    if (checkUser.status === "banned") {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been banned. Please contact support.",
+      });
+    }
+
+    if (checkUser.status === "suspended") {
+      if (checkUser.suspendedUntil && checkUser.suspendedUntil > new Date()) {
+        const suspendedDate = new Date(checkUser.suspendedUntil).toLocaleDateString();
+        return res.status(403).json({
+          success: false,
+          message: `Your account is suspended until ${suspendedDate}. Please contact support.`,
+        });
+      } else {
+        // Suspension expired, reactivate account
+        checkUser.status = "active";
+        checkUser.suspendedUntil = null;
+        await checkUser.save();
+      }
+    }
+
     const accessToken = jwt.sign(
       {
         _id: checkUser._id,

@@ -69,6 +69,7 @@ function AdminDashboard() {
   // Dialog states
   const [deleteDialog, setDeleteDialog] = useState({ open: false, type: "", id: "", name: "" });
   const [roleDialog, setRoleDialog] = useState({ open: false, userId: "", currentRole: "", newRole: "" });
+  const [suspendDialog, setSuspendDialog] = useState({ open: false, userId: "", suspendedUntil: "" });
 
   const handleLogout = () => {
     resetCredentials();
@@ -161,13 +162,58 @@ function AdminDashboard() {
   };
 
   const handleUserStatus = async (userId, status) => {
+    if (status === "suspended") {
+      setSuspendDialog({ open: true, userId, suspendedUntil: "" });
+      return;
+    }
     try {
       const response = await updateUserStatusService(userId, { status });
       if (response.success) {
+        toast({
+          title: "Success",
+          description: status === "banned" ? "User banned successfully" : "User reactivated",
+        });
         fetchUsers();
       }
     } catch (error) {
       console.error("Error updating user status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update user status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSuspendUser = async () => {
+    if (!suspendDialog.suspendedUntil) {
+      toast({
+        title: "Error",
+        description: "Please select a suspension end date",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const response = await updateUserStatusService(suspendDialog.userId, {
+        status: "suspended",
+        suspendedUntil: suspendDialog.suspendedUntil,
+      });
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "User suspended successfully",
+        });
+        setSuspendDialog({ open: false, userId: "", suspendedUntil: "" });
+        fetchUsers();
+      }
+    } catch (error) {
+      console.error("Error suspending user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to suspend user",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1046,6 +1092,35 @@ function AdminDashboard() {
               Cancel
             </Button>
             <Button onClick={handleUpdateRole}>Update Role</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Suspend User Dialog */}
+      <Dialog open={suspendDialog.open} onOpenChange={(open) => setSuspendDialog({ ...suspendDialog, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Suspend User</DialogTitle>
+            <DialogDescription>Select the suspension end date. The user will be unable to login until this date.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label htmlFor="suspendDate" className="text-sm font-medium">Suspension End Date</label>
+            <Input
+              id="suspendDate"
+              type="date"
+              value={suspendDialog.suspendedUntil}
+              onChange={(e) => setSuspendDialog({ ...suspendDialog, suspendedUntil: e.target.value })}
+              min={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSuspendDialog({ open: false, userId: "", suspendedUntil: "" })}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleSuspendUser}>Suspend User</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
