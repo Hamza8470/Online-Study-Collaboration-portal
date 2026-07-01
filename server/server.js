@@ -39,7 +39,12 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-
+app.use(
+  cors({
+    origin: "https://online-study-collaboration-portal.vercel.app/",
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(express.static("uploads")); // Serve uploaded files
 
